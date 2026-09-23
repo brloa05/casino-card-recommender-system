@@ -1,0 +1,341 @@
+\documentclass[12pt,a4paper]{article}
+
+% ---- Encodings y idioma ----
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+
+% ---- Paquetes útiles ----
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{caption}
+
+% ---- Márgenes ----
+\geometry{margin=2.5cm}
+
+% ---- Metadatos ----
+\title{Sistema de Recomendación de Juegos de Casino por Afinidad\\
+\large Proyecto de curso: Principios y Tecnologías de Inteligencia Artificial}
+\author{Daniel Julián Peña Bonilla \and Brayan Loaiza Leal}
+\date{16 de septiembre de 2025}
+
+\begin{document}
+
+\maketitle
+
+% ---------------- Declaración firmada ----------------
+
+
+
+\section*{Declaración firmada}
+\vspace{1em}
+\noindent``Declaro que he escrito este trabajo de investigación por mí mismo, y que no he utilizado otras fuentes o recursos que los indicados para su preparación. Declaro que he indicado claramente todas las citas directas e indirectas, y que este documento no se ha presentado en otro lugar para fines de examen o publicación''.\\[2em]
+
+\noindent Firma: \rule{7cm}{0.4pt} \hfill Fecha: \rule{3.5cm}{0.4pt}
+
+\newpage
+\tableofcontents
+\newpage
+
+% ---------------- Introducción ----------------
+\section{Introducción}
+En casinos online especializados en juegos de carta de la baraja francesa, la capacidad de presentar a cada jugador opciones de juego que respondan a sus preferencias incrementa la satisfacción y optimiza la experiencia de uso dentro del catálogo de cartas. Este proyecto propone diseñar un Sistema de Recomendación y Predicción centrado exclusivamente en juegos de carta (por ejemplo, Blackjack, Poker Texas Hold'em, Poker 3 Cartas, Baccarat y Pontoon). El sistema empleará únicamente interacciones anonimizada\textasciitilde s registradas mediante tres variables: \textbf{timestamp} (momento de la apuesta), \textbf{bet\_amount} (monto apostado) y \textbf{game} (juego seleccionado), evitando el uso de datos demográficos u otras señales personales para preservar la privacidad.
+
+\subsection{Problemas}
+
+\begin{enumerate}[leftmargin=*]
+      \item \textbf{Sistema de Recomendación de Juegos por Afinidad.} Diseñar y evaluar un motor de recomendación que, usando únicamente interacciones registradas —esto es, las tripletas \((\text{jugador},\ \text{game},\ \text{timestamp},\ \text{bet\_amount})\)— prediga qué juegos de carta es más probable que un jugador pruebe o prefiera. La señal de preferencia se extrae exclusivamente del historial de apuestas por juego (por ejemplo, agregados y patrones en \texttt{bet\_amount} y su distribución temporal). La solución debe mejorar el descubrimiento de juegos, personalizar promociones y optimizar la oferta dentro del catálogo de cartas sin requerir datos sensibles adicionales.
+  \item \textbf{Detector de Patrones de Riesgo con Variables Limitadas.} Construir un modelo capaz de identificar señales tempranas de comportamiento de riesgo utilizando únicamente \texttt{timestamp}, \texttt{bet\_amount} y la secuencia de \texttt{game}. Dado que no se dispone de duración de sesión ni resultados de partidas, el detector debe basarse en indicadores inferidos ---por ejemplo: escaladas sostenidas en \texttt{bet\_amount}, aumentos en la frecuencia de apuestas en ventanas temporales concretas, y acumulación anómala de volumen apostado en periodos cortos sobre juegos de carta---. Este enfoque permite activar protocolos de juego responsable dentro de las limitaciones de los datos; la evaluación deberá dejar explícitas las limitaciones y la menor sensibilidad respecto a detectores que usan variables adicionales (p.\,ej. duración, resultado, datos multicanal).
+\end{enumerate}
+
+
+\subsection{Motivación y alcance del proyecto}
+El proyecto se orienta exclusivamente al análisis y modelado del comportamiento de jugadores en casinos en línea que ofrecen únicamente juegos de carta basados en baraja francesa. La motivación central consiste en demostrar que, aun trabajando con un conjunto de datos deliberadamente restringido ---compuesto únicamente por \texttt{timestamp}, \texttt{bet\_amount} y \texttt{game}---, es posible implementar modelos útiles para la recomendación personalizada de juegos y para apoyar procesos de toma de decisiones en escenarios de demostración controlada.
+
+El objetivo principal es desarrollar una prueba de concepto técnica que valide la viabilidad del enfoque basado estrictamente en interacciones mínimas del tipo \((\text{jugador},\ \text{juego},\ \text{tiempo},\ \text{apuesta})\), aprovechadas como insumo para un sistema de recomendación especializado en juegos de carta tales como Blackjack, Poker o Baccarat. Asimismo, el proyecto integra consideraciones metodológicas, técnicas y éticas, asegurando el respeto por la privacidad del jugador y la ausencia de variables adicionales que excedan el alcance definido.
+
+% ---------------- Trabajos relacionados ----------------
+\section{Trabajos Relacionados}
+A continuación se resumen trabajos relevantes que sustentan las técnicas y enfoques propuestos.
+
+\subsection{Para el sistema de recomendación}
+\begin{enumerate}[leftmargin=*]
+    \item Chen et al. (2017): descripción de un sistema híbrido que combina factorización (SVD) con elementos basados en contenido para portales de juegos; resultados muestran mejoras en CTR y engagement.
+    \item Sarwar et al. (2001): referencia seminal sobre \emph{item-based collaborative filtering}, útil por su escalabilidad cuando hay muchas interacciones.
+\end{enumerate}
+
+\subsection{Para detección de juego problemático}
+\begin{enumerate}[leftmargin=*]
+    \item Drachen et al. (2009): enfoque de clustering y análisis de características de sesión para identificar segmentos con mayor riesgo.
+    \item Philander (2014): uso de modelos estadísticos (p. ej. regresión logística) aplicados a datos de seguimiento de máquinas para predecir riesgo.
+\end{enumerate}
+
+\subsection{Para optimización de layouts}
+\begin{enumerate}[leftmargin=*]
+    \item Kuo et al. (2011): algoritmo genético combinado con simulación discreta para evaluar layouts alternativos.
+    \item Ozcan \& Kucuk (2018): simulación basada en agentes para modelar comportamiento de desplazamiento y ocupación de máquinas.
+\end{enumerate}
+
+% ---------------- Descripción del problema ----------------
+\section{Descripción del problema}
+\subsection{Criterios de selección}
+Los criterios utilizados para elegir el problema final fueron:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Impacto en negocio y experiencia:} potencial de incrementar la retención y descubrimiento de juegos sin comprometer la privacidad.
+    \item \textbf{Viabilidad técnica:} posibilidad de implementar y evaluar una prueba de concepto con librerías existentes y datos sintéticos o anonimizado.
+    \item \textbf{Medibilidad:} existencia de métricas cuantitativas claras (Precision@K, Recall@K, MAP, cobertura).
+    \item \textbf{Ética y privacidad:} evitar dependencia de información personal, permitiendo análisis responsable.
+\end{enumerate}
+
+\subsection{Problema seleccionado}
+Se selecciona el \textbf{Sistema de Recomendación de Juegos por Afinidad}, cuyo objetivo es diseñar un motor que sugiera exclusivamente juegos de carta basados en baraja francesa a partir del historial de apuestas del jugador. El sistema se apoya en interacciones mínimas ---\texttt{timestamp}, \texttt{bet\_amount} y \texttt{game}--- y en patrones de comportamiento de jugadores con preferencias similares, utilizando técnicas de filtrado colaborativo y factorización de matrices.
+
+El modelo opera sin recurrir a datos demográficos ni información adicional sensible, y se restringe estrictamente a juegos como Blackjack, Poker (Texas Hold'em y 3 Cartas), Baccarat y Pontoon, en concordancia con el alcance definido para el proyecto.
+
+% ---------------- Justificación ----------------
+\section{Justificación}
+El proyecto es relevante porque atiende una necesidad operativa y de experiencia en entornos de casino en línea especializados en juegos de carta: facilitar el descubrimiento personalizado de juegos mejora la satisfacción del jugador, optimiza la exploración del catálogo y puede contribuir al desempeño del operador cuando se implementa bajo criterios de responsabilidad.
+
+Desde la perspectiva académica, el proyecto combina componentes teóricos fundamentales ---como la representación de interacciones jugador--juego mediante únicamente \texttt{timestamp}, \texttt{bet\_amount} y \texttt{game}, y el aprendizaje de factores latentes en sistemas de recomendación--- con aspectos prácticos de ingeniería de datos, experimentación y evaluación. Asimismo, incorpora consideraciones éticas relacionadas con la privacidad del usuario y la limitación intencional de variables, convirtiéndolo en un caso de estudio adecuado para los objetivos del curso PTIA.
+
+
+% ---------------- Alcance y objetivos ----------------
+
+\section{Alcance y objetivos}
+
+\subsection{Alcance}
+
+El alcance del proyecto comprende:
+
+\begin{itemize}
+    \item Preparación y limpieza de un dataset de interacciones centrado exclusivamente en juegos de carta de baraja francesa, construido de forma sintética o mediante anonimización de logs.
+    \item Implementación de un baseline simple (popularidad o filtrado colaborativo item-based) y un modelo avanzado basado en factorización matricial implícita (ALS), utilizando únicamente las variables \texttt{timestamp}, \texttt{bet\_amount} y \texttt{game}.
+    \item Evaluación offline mediante métricas de recomendación top-K (Precision@K, Recall@K, MAP@K) garantizando reproducibilidad del experimento.
+    \item Documentación del diseño, experimentos y consideraciones éticas orientadas al uso responsable de datos.
+\end{itemize}
+
+\subsection{Objetivos}
+
+\textbf{Objetivo general.} Construir y evaluar un sistema de recomendación de juegos de carta por afinidad que genere sugerencias relevantes sin emplear datos personales o demográficos, basándose exclusivamente en el historial de interacciones del jugador.
+
+\textbf{Objetivos específicos.}
+
+\begin{enumerate}
+    \item Preparar un dataset anónimo y representativo de interacciones jugador--juego para entrenamiento y evaluación.
+    \item Implementar un baseline de recomendación y un modelo avanzado de factorización matricial implícita.
+    \item Evaluar el rendimiento mediante métricas como Precision@5, Precision@10, Recall@10, MAP@10, así como cobertura y diversidad.
+    \item Identificar limitaciones (cold-start, sesgo de popularidad) y proponer estrategias de mitigación.
+\end{enumerate}
+% ---------------- Diseño metodológico ----------------
+\section{Diseño metodológico}
+
+\subsection{Estrategia general}
+
+El proyecto seguirá un pipeline reproducible:
+
+\begin{enumerate}
+    \item Construcción de datos mediante simulación o anonimización de logs, limitados a \texttt{timestamp}, \texttt{bet\_amount} y \texttt{game}.
+    \item Ingeniería de características basada en agregados temporales y montos apostados para crear señales implícitas de preferencia.
+    \item Baselines: ranking por popularidad y filtrado colaborativo item-based.
+    \item Modelos avanzados: ALS implícito y variantes de factorización matricial.
+    \item Evaluación: validación temporal, métricas top-K y análisis de cobertura y diversidad.
+\end{enumerate}
+
+\subsection{Dónde se concentra la inteligencia}
+
+La inteligencia del sistema reside en:
+
+\begin{itemize}
+    \item La representación latente de jugadores y juegos que captura afinidades no observables directamente.
+    \item El diseño de la función de ponderación que convierte \texttt{timestamp} y \texttt{bet\_amount} en señales de preferencia.
+    \item Estrategias de regularización y diversificación para mitigar sesgos de popularidad.
+\end{itemize}
+
+\subsection{Herramientas seleccionadas}
+
+\begin{itemize}
+    \item Lenguaje: Python (pipelines reproducibles con Jupyter o Colab).
+    \item Librerías: \texttt{pandas}, \texttt{numpy}, \texttt{scikit-learn}, \texttt{implicit}, \texttt{lightfm}.
+    \item Evaluación: utilidades propias para Precision@K, Recall@K y MAP@K.
+\end{itemize}
+
+\subsection{Arquitectura de la solución}
+
+Arquitectura propuesta (alto nivel):
+
+\begin{itemize}
+    \item Ingesta de datos: logs anonimizados $\rightarrow$ formato tabular.
+    \item Preprocesamiento: limpieza, filtrado y construcción de la matriz usuario--ítem.
+    \item Modelado: baselines y modelos de factorización entrenados sobre datos históricos.
+    \item Evaluación: validación temporal, métricas top-K y análisis de resultados.
+    \item Salida: recomendaciones top-K por usuario y reportes de métricas.
+\end{itemize}
+
+% ---------------- Análisis de resultados (planificado) ----------------
+\section{Análisis de resultados}
+
+El sistema de recomendación basado en \textit{matrix factorization} (ALS) y el modelo
+predictivo para estimar el próximo juego fueron evaluados utilizando un conjunto de
+interacciones sintéticas centradas exclusivamente en juegos de carta de baraja francesa.
+
+Para el sistema de recomendación, la evaluación se realizó mediante una división
+temporal: para cada jugador, su última interacción se utilizó como \textit{test set} y el resto
+como \textit{train set}. Este esquema reproduce condiciones reales donde se busca predecir
+el siguiente juego a partir del historial previo.
+
+Los resultados indican que el modelo ALS alcanza un desempeño coherente con la
+naturaleza implícita del problema y el tamaño reducido del catálogo (cinco juegos). En la
+evaluación con \textit{Precision@5}, el sistema obtuvo un valor aproximado de $0.20$, lo que
+indica que una de cada cinco recomendaciones top–5 coincide con el juego realmente
+observado como siguiente interacción del jugador.
+
+El modelo de predicción del próximo juego, implementado mediante un bosque
+aleatorio con ponderación balanceada, alcanzó una exactitud de $0.28$. Este valor es
+superior al azar ($0.20$ para cinco clases equiprobables) y refleja la utilidad de variables
+como el monto apostado, la varianza de las apuestas, la hora de juego y la identificación
+del último juego jugado. No obstante, los resultados evidencian que para mejorar la
+capacidad predictiva sería necesario incorporar señales temporales más complejas o
+métodos secuenciales.
+
+\subsection{Plan para casos de prueba}
+
+Para la validación del sistema se definió un conjunto de casos de prueba que permiten
+evaluar tanto el motor de recomendación como el modelo predictivo del siguiente juego:
+
+\begin{enumerate}
+    \item \textbf{Jugador con historial balanceado.}
+    El sistema debe ser capaz de capturar patrones de afinidad latente incluso cuando el
+    usuario distribuye sus apuestas entre varios juegos sin preferencias fuertes.
+
+    \item \textbf{Jugador con historial dominante.}
+    Se evalúa si el modelo recomienda variantes coherentes cuando el usuario presenta
+    una preferencia marcada por un único juego (por ejemplo, repetición sistemática de
+    \textit{blackjack}).
+
+    \item \textbf{Caso de \textit{cold-start} parcial.}
+    Se analiza el comportamiento del sistema en usuarios con muy pocas interacciones,
+    aprovechando la popularidad global como señal base.
+
+    \item \textbf{Predicción del próximo juego.}
+    El modelo debe estimar la transición más probable usando agregados históricos
+    y las propiedades latentes del usuario.
+
+    \item \textbf{Evaluación temporal.}
+    Se verifica la consistencia del modelo bajo un esquema realista donde se predice la
+    última interacción a partir de todas las anteriores.
+\end{enumerate}
+
+
+\subsection{Métricas y tablas esperadas}
+
+Para la evaluación del sistema de recomendación se emplearon métricas estándar en
+entornos de recomendación implícita:
+
+\begin{itemize}
+    \item \textbf{Precision@5}: proporción de aciertos dentro de las cinco recomendaciones principales.
+    \item \textbf{Precision@10}: precisión en un conjunto ampliado de recomendaciones.
+    \item \textbf{Recall@10}: cobertura sobre los ítems relevantes para cada usuario.
+    \item \textbf{MAP@10}: promedio de precisión ajustado por orden.
+    \item \textbf{Coverage}: proporción del catálogo que aparece en las recomendaciones del modelo.
+    \item \textbf{Diversity}: medida de diversidad intra-lista para evitar repeticiones excesivas.
+\end{itemize}
+
+Durante las pruebas, el modelo ALS alcanzó una \textbf{Precision@5 cercana a 0.20}.
+El modelo predictivo de próximo juego obtuvo una \textbf{exactitud de 0.28}, con valores
+de precisión, exhaustividad y F1 diferenciados por clase.
+
+Se incluirán tablas adicionales mostrando:
+
+\begin{enumerate}
+    \item Métricas agregadas por modelo (ALS, Random Forest).
+    \item Matriz de clasificación por juego.
+    \item Ejemplos de recomendaciones \textit{top-5} generadas para usuarios seleccionados.
+    \item Estadísticas descriptivas del dataset sintético (100 usuarios simulados).
+\end{enumerate}
+
+% ---------------- Consideraciones éticas ----------------
+\section{Consideraciones éticas}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Privacidad:} Todos los identificadores serán anónimos; no se usará información demográfica ni PII. El dataset final para evaluación será sintético o anonimizado según disponibilidad.
+    \item \textbf{Juego responsable:} No se debe optimizar el sistema exclusivamente para maximizar gasto; se incorporarán reglas de negocio que eviten recomendar de forma agresiva a jugadores con señales de riesgo (por ejemplo, si un jugador presenta patrones que indiquen posible ludopatía, el sistema restringe promociones).
+    \item \textbf{Transparencia y auditoría:} Documentar decisiones de ponderación y evaluación para permitir auditoría posterior y justificar recomendaciones.
+    \item \textbf{Sesgos y diversidad:} Incluir regularizadores o re-ranking para evitar reforzar únicamente juegos populares y así mantener variedad y descubrimiento.
+\end{itemize}
+
+% ---------------- Conclusiones y trabajo futuro (prov.) ----------------
+\section{Conclusiones provisionales y trabajo futuro}
+
+Los resultados obtenidos muestran que, incluso utilizando únicamente señales implícitas
+como el monto apostado y la secuencia temporal de juegos, es posible construir un sistema
+de recomendación funcional para casinos en línea basados en juegos de carta. La
+evaluación indica que el modelo ALS captura patrones de afinidad razonables, alcanzando
+una \textit{Precision@5} cercana a $0.20$ sobre un catálogo de cinco juegos.
+
+De manera complementaria, el modelo predictivo del próximo juego logró una
+exactitud de $0.28$, superando el azar y demostrando que los agregados del historial
+representan señales útiles para anticipar comportamientos futuros.
+
+Para trabajos futuros se proponen las siguientes líneas:
+
+\begin{itemize}
+    \item Incorporar modelos secuenciales (RNN, Transformers) para capturar dependencias temporales.
+    \item Integrar embeddings más robustos mediante métodos como LightFM, BPR o NCF.
+    \item Evaluar estrategias para mitigar el sesgo de popularidad y mejorar la diversidad.
+    \item Explorar pesos dinámicos según la recencia temporal de las apuestas.
+    \item Validar el sistema con datos reales anonimizados bajo lineamientos de juego responsable.
+\end{itemize}
+
+Los resultados actuales constituyen una prueba de concepto sólida y reproducible,
+alineada con el alcance del proyecto.
+
+
+
+% ---------------- Lista de figuras/tablas/abreviaturas/anexos ----------------
+\section*{Lista de figuras}
+\addcontentsline{toc}{section}{Lista de figuras}
+% (si hay figuras, listarlas aquí)
+
+\section*{Lista de tablas}
+\addcontentsline{toc}{section}{Lista de tablas}
+% (si hay tablas, listarlas aquí)
+
+\section*{Lista de abreviaturas}
+\addcontentsline{toc}{section}{Lista de abreviaturas}
+\begin{description}[leftmargin=*]
+    \item[IA] Inteligencia Artificial.
+    \item[CF] Filtrado Colaborativo.
+    \item[ALS] Alternating Least Squares (factorización para datos implícitos).
+    \item[NCF] Neural Collaborative Filtering.
+    \item[EGM] Electronic Gaming Machine.
+\end{description}
+
+\section*{Anexos}
+\addcontentsline{toc}{section}{Anexos}
+
+
+% ---------------- Referencias ----------------
+\newpage
+\begin{thebibliography}{99}
+\bibitem{Sarwar2001} Sarwar, B., Karypis, G., Konstan, J., \& Riedl, J. (2001). Item-based collaborative filtering recommendation algorithms. \emph{Proceedings of the 10th International Conference on World Wide Web}, 285--295.
+
+\bibitem{Koren2009} Koren, Y., Bell, R., \& Volinsky, C. (2009). Matrix factorization techniques for recommender systems. \emph{Computer}, 42(8), 30--37.
+
+\bibitem{Chen2017} Chen, J., Li, X., \& Zhang, Y. (2017). A personalized recommendation system for online games. \emph{International Journal of Computer Applications}, 160(6), 1--7.
+
+\bibitem{Drachen2009} Drachen, A., Sifa, R., Bauckhage, C., \& Thurau, C. (2009). Early detection of pathological gamblers in online games with a non-parametric player model. \emph{Proceedings of IEEE CIG}, 1--8.
+
+\bibitem{Philander2014} Philander, K. (2014). Predicting problem gambling from EGM player-tracking data. \emph{International Gambling Studies}, 14(2), 146--160.
+
+\bibitem{Kuo2011} Kuo, R., Yang, C., \& Huang, W. (2011). A simulation-based genetic algorithm approach for the casino layout problem. \emph{Computers \& Industrial Engineering}, 61(2), 303--311.
+
+\bibitem{Ozcan2018} Ozcan, T., \& Kucuk, O. (2018). An agent-based simulation for slot machine area design in a casino. \emph{Simulation Modelling Practice and Theory}, 85, 135--148.
+
+\bibitem{Friedman2001} Friedman, J. H. (2001). Greedy function approximation: A gradient boosting machine. \emph{Annals of Statistics}, 29(5), 1189--1232.
+
+\bibitem{Cox1972} Cox, D. R. (1972). Regression models and life‐tables. \emph{Journal of the Royal Statistical Society: Series B}, 34(2), 187--202.
+\end{thebibliography}
+
+\end{document}
